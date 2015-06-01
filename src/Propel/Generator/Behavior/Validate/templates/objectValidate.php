@@ -9,7 +9,7 @@
 public function validate(ValidatorInterface $validator = null)
 {
     if (null === $validator) {
-         $validator = new Validator(
+         $validator = new RecursiveValidator(
                         new ClassMetadataFactory(new StaticMethodLoader()),
                         new ConstraintValidatorFactory(),
                         new DefaultTranslator()
