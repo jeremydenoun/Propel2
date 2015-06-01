@@ -9,10 +9,14 @@
 public function validate(ValidatorInterface $validator = null)
 {
     if (null === $validator) {
+         $translator = new IdentityTranslator();
+         $contextFactory = new ExecutionContextFactory($translator);
+         $validatorFactory = new ConstraintValidatorFactory();
+
          $validator = new RecursiveValidator(
-                        new ClassMetadataFactory(new StaticMethodLoader()),
-                        new ConstraintValidatorFactory(),
-                        new DefaultTranslator()
+					     $contextFactory,
+					     new LazyLoadingMetadataFactory(new StaticMethodLoader()),
+					     $validatorFactory
 	 );
     }
 

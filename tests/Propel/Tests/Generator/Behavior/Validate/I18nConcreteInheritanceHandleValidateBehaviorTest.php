@@ -11,7 +11,7 @@
 namespace Propel\Tests\Generator\Behavior\Validate;
 
 use Propel\Tests\Helpers\Bookstore\BookstoreTestBase;
-use Symfony\Component\Validator\Mapping\ClassMetadataFactory;
+use Symfony\Component\Validator\Mapping\Factory\LazyLoadingMetadataFactory;
 use Symfony\Component\Validator\Mapping\Loader\StaticMethodLoader;
 
 /**
@@ -28,7 +28,7 @@ class I18nConcreteInheritanceHandleValidateBehaviorTest extends BookstoreTestBas
 
     public function assertPreConditions()
     {
-        $this->metadataFactory = new ClassMetadataFactory(new StaticMethodLoader());
+        $this->metadataFactory = new LazyLoadingMetadataFactory(new StaticMethodLoader());
     }
 
     public function testI18nBehaviorHandlesValidateBehavior()

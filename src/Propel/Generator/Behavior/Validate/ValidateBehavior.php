@@ -43,16 +43,17 @@ class ValidateBehavior extends Behavior
         $this->builder = $builder;
         $this->builder->declareClasses(
             'Symfony\\Component\\Validator\\Mapping\\ClassMetadata',
-            'Symfony\\Component\\Validator\\DefaultTranslator',
+            'Symfony\\Component\\Translation\\IdentityTranslator',
+	    'Symfony\\Component\\Validator\\Context\\ExecutionContextFactory',
             'Symfony\\Component\\Validator\\Mapping\\Loader\\StaticMethodLoader',
             'Symfony\\Component\\Validator\\ConstraintValidatorFactory',
-            'Symfony\\Component\\Validator\\Mapping\\ClassMetadataFactory',
+            'Symfony\\Component\\Validator\\Mapping\\Factory\\LazyLoadingMetadataFactory',
             'Symfony\\Component\\Validator\\ConstraintViolationList'
         );
 
         //if SF >= 5.3 use new validator classes
         $this->builder->declareClasses(
-            'Symfony\\Component\\Validator\\RecursiveValidator',
+            'Symfony\\Component\\Validator\\Validator\\RecursiveValidator',
             'Symfony\\Component\\Validator\\ValidatorInterface'
 	);
 
