@@ -52,7 +52,7 @@ class ValidateBehavior extends Behavior
 
         //if SF >= 5.3 use new validator classes
         $this->builder->declareClasses(
-            'Symfony\\Component\\Validator\\Validator',
+            'Symfony\\Component\\Validator\\RecursiveValidator',
             'Symfony\\Component\\Validator\\ValidatorInterface'
 	);
 
