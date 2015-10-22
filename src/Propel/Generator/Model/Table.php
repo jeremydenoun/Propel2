@@ -479,7 +479,7 @@ class Table extends ScopedMappingModel implements IdMethod
     }
 
     /**
-     * Returns the name of the parent class used for superclass of all objects
+     * Returns the name of the parent class used for superclass of all query objects
      * of this table.
      *
      * @return string

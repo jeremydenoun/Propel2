@@ -214,7 +214,7 @@ class Database extends ScopedMappingModel
     }
 
     /**
-     * Returns the name of the base super class inherited by query object
+     * Returns the name of the base super class inherited by query
      * objects. This parameter is overridden at the table level.
      *
      * @return string
@@ -236,7 +236,7 @@ class Database extends ScopedMappingModel
     }
 
     /**
-     * Sets the name of the base super class inherited by query object.
+     * Sets the name of the base super class inherited by query objects.
      * This parameter is overridden at the table level.
      *
      * @param string $class.
