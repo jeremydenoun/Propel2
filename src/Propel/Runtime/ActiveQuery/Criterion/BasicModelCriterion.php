@@ -27,14 +27,14 @@ class BasicModelCriterion extends AbstractModelCriterion
     protected function appendPsForUniqueClauseTo(&$sb, array &$params)
     {
         if (null !== $this->value) {
-            if (!strpos($this->clause, '?')) {
+            if (false === strpos($this->clause, '?')) {
                 throw new InvalidClauseException('A clause must contain a question mark in order to be bound to a value');
             }
-            $params[] = array(
+            $params[] = [
                 'table'  => $this->realtable,
                 'column' => $this->column,
                 'value'  => $this->value
-            );
+            ];
             $sb .= str_replace('?', ':p'.count($params), $this->clause);
         } else {
             $sb .= $this->clause;

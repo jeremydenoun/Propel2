@@ -149,7 +149,7 @@ class ModelCriteria extends BaseModelCriteria
     public function filterByArray($conditions)
     {
         foreach ($conditions as $column => $args) {
-            call_user_func_array(array($this, 'filterBy' . $column), is_array($args) ? $args : array($args));
+            call_user_func_array([$this, 'filterBy' . $column], is_array($args) ? $args : [$args]);
         }
 
         return $this;
@@ -386,8 +386,8 @@ class ModelCriteria extends BaseModelCriteria
         }
 
         if ('*' === $columnArray) {
-            $columnArray = array();
-            foreach (call_user_func(array($this->modelTableMapName, 'getFieldNames'), TableMap::TYPE_PHPNAME) as $column) {
+            $columnArray = [];
+            foreach (call_user_func([$this->modelTableMapName, 'getFieldNames'], TableMap::TYPE_PHPNAME) as $column) {
                 $columnArray []= $this->modelName . '.' . $column;
             }
         }
@@ -679,7 +679,7 @@ class ModelCriteria extends BaseModelCriteria
     public function withColumn($clause, $name = null)
     {
         if (null === $name) {
-            $name = str_replace(array('.', '(', ')'), '', $clause);
+            $name = str_replace(['.', '(', ')'], '', $clause);
         }
 
         $clause = trim($clause);
@@ -777,7 +777,7 @@ class ModelCriteria extends BaseModelCriteria
     {
         parent::clear();
 
-        $this->with = array();
+        $this->with = [];
         $this->primaryCriteria = null;
         $this->formatter = null;
         $this->select = null;
@@ -893,7 +893,7 @@ class ModelCriteria extends BaseModelCriteria
             $class = substr($class, 1);
         }
 
-        return array($class, $alias);
+        return [$class, $alias];
     }
 
     /**
@@ -1144,7 +1144,8 @@ class ModelCriteria extends BaseModelCriteria
             throw new PropelException(__METHOD__ .' cannot be used on a query with a join, because Propel cannot transform a SQL JOIN into a subquery. You should split the query in two queries to avoid joins.');
         }
 
-        if (!$ret = $this->findOne($con)) {
+        $ret = $this->findOne($con);
+        if (!$ret) {
             $class = $this->getModelName();
             $obj = new $class();
             foreach ($this->keys() as $key) {
@@ -1346,7 +1347,8 @@ class ModelCriteria extends BaseModelCriteria
         $criteria->setPrimaryTableName(constant($this->modelTableMapName . '::TABLE_NAME'));
 
         $dataFetcher = $criteria->doCount($con);
-        if ($row = $dataFetcher->fetch()) {
+        $row = $dataFetcher->fetch();
+        if ($row) {
             $count = (int) current($row);
         } else {
             $count = 0; // no rows returned; we infer that means 0 matches.
@@ -1426,12 +1428,17 @@ class ModelCriteria extends BaseModelCriteria
      * Code to execute before every DELETE statement
      *
      * @param ConnectionInterface $con The connection object used by the query
+     * @return int
      */
     protected function basePreDelete(ConnectionInterface $con)
     {
         return $this->preDelete($con);
     }
 
+    /**
+     * @param ConnectionInterface $con
+     * @return int
+     */
     protected function preDelete(ConnectionInterface $con)
     {
     }
@@ -1441,12 +1448,18 @@ class ModelCriteria extends BaseModelCriteria
      *
      * @param int                 $affectedRows the number of deleted rows
      * @param ConnectionInterface $con          The connection object used by the query
+     * @return int
      */
     protected function basePostDelete($affectedRows, ConnectionInterface $con)
     {
         return $this->postDelete($affectedRows, $con);
     }
 
+    /**
+     * @param int $affectedRows
+     * @param ConnectionInterface $con
+     * @return int
+     */
     protected function postDelete($affectedRows, ConnectionInterface $con)
     {
     }
@@ -1476,7 +1489,8 @@ class ModelCriteria extends BaseModelCriteria
 
         try {
             return $con->transaction(function () use ($con, $criteria) {
-                if (!$affectedRows = $criteria->basePreDelete($con)) {
+                $affectedRows = $criteria->basePreDelete($con);
+                if (!$affectedRows) {
                     $affectedRows = $criteria->doDelete($con);
                 }
                 $criteria->basePostDelete($affectedRows, $con);
@@ -1567,12 +1581,19 @@ class ModelCriteria extends BaseModelCriteria
      * @param array               $values               The associative array of columns and values for the update
      * @param ConnectionInterface $con                  The connection object used by the query
      * @param boolean             $forceIndividualSaves If false (default), the resulting call is a Criteria::doUpdate(), otherwise it is a series of save() calls on all the found objects
+     * @return int
      */
     protected function basePreUpdate(&$values, ConnectionInterface $con, $forceIndividualSaves = false)
     {
         return $this->preUpdate($values, $con, $forceIndividualSaves);
     }
 
+    /**
+     * @param array $values
+     * @param ConnectionInterface $con
+     * @param bool $forceIndividualSaves
+     * @return int
+     */
     protected function preUpdate(&$values, ConnectionInterface $con, $forceIndividualSaves = false)
     {
     }
@@ -1582,12 +1603,18 @@ class ModelCriteria extends BaseModelCriteria
      *
      * @param int                 $affectedRows the number of updated rows
      * @param ConnectionInterface $con          The connection object used by the query
+     * @return int
      */
     protected function basePostUpdate($affectedRows, ConnectionInterface $con)
     {
         return $this->postUpdate($affectedRows, $con);
     }
 
+    /**
+     * @param int $affectedRows
+     * @param ConnectionInterface $con
+     * @return int
+     */
     protected function postUpdate($affectedRows, ConnectionInterface $con)
     {
     }
@@ -1627,7 +1654,8 @@ class ModelCriteria extends BaseModelCriteria
         }
 
         return $con->transaction(function () use ($con, $values, $criteria, $forceIndividualSaves) {
-            if (!$affectedRows = $criteria->basePreUpdate($values, $con, $forceIndividualSaves)) {
+            $affectedRows = $criteria->basePreUpdate($values, $con, $forceIndividualSaves);
+            if (!$affectedRows) {
                 $affectedRows = $criteria->doUpdate($values, $con, $forceIndividualSaves);
             }
             $criteria->basePostUpdate($affectedRows, $con);
@@ -1678,8 +1706,8 @@ class ModelCriteria extends BaseModelCriteria
                 // this criteria updates only one object defined by a concrete primary key,
                 // therefore there's no need to remove anything from the pool
             } else {
-                call_user_func(array($this->modelTableMapName, 'clearInstancePool'));
-                call_user_func(array($this->modelTableMapName, 'clearRelatedInstancePool'));
+                call_user_func([$this->modelTableMapName, 'clearInstancePool']);
+                call_user_func([$this->modelTableMapName, 'clearRelatedInstancePool']);
             }
         }
 
@@ -1768,7 +1796,7 @@ class ModelCriteria extends BaseModelCriteria
             $value = '| ' . implode(' | ', $value) . ' |';
         } elseif ('ENUM' === $colMap->getType() && !is_null($value)) {
             if (is_array($value)) {
-                $value = array_map(array($colMap, 'getValueSetKey'), $value);
+                $value = array_map([$colMap, 'getValueSetKey'], $value);
             } else {
                 $value = $colMap->getValueSetKey($value);
             }
@@ -1855,7 +1883,7 @@ class ModelCriteria extends BaseModelCriteria
         } elseif ($this->hasSelectQuery($prefix)) {
             return $this->getColumnFromSubQuery($prefix, $phpName, $failSilently);
         } elseif ($failSilently) {
-            return array(null, null);
+            return [null, null];
         } else {
             throw new UnknownModelException(sprintf('Unknown model, alias or table "%s"', $prefix));
         }
@@ -1869,17 +1897,17 @@ class ModelCriteria extends BaseModelCriteria
                 $realColumnName = $column->getFullyQualifiedName();
             }
 
-            return array($column, $realColumnName);
+            return [$column, $realColumnName];
         } elseif ($tableMap->hasColumn($phpName)) {
             $column = $tableMap->getColumn($phpName);
             $realColumnName = $column->getFullyQualifiedName();
 
-            return array($column, $realColumnName);
+            return [$column, $realColumnName];
         } elseif (isset($this->asColumns[$phpName])) {
             // aliased column
-            return array(null, $phpName);
+            return [null, $phpName];
         } elseif ($failSilently) {
-            return array(null, null);
+            return [null, null];
         } else {
             throw new UnknownColumnException(sprintf('Unknown column "%s" on model, alias or table "%s"', $phpName, $prefix));
         }
@@ -1921,7 +1949,7 @@ class ModelCriteria extends BaseModelCriteria
         }
 
         // clear only the selectColumns, clearSelectColumns() clears asColumns too
-        $this->selectColumns = array();
+        $this->selectColumns = [];
 
         // We need to set the primary table name, since in the case that there are no WHERE columns
         // it will be impossible for the createSelectSql() method to determine which
@@ -1931,7 +1959,7 @@ class ModelCriteria extends BaseModelCriteria
         }
 
         // Add requested columns which are not withColumns
-        $columnNames = is_array($this->select) ? $this->select : array($this->select);
+        $columnNames = is_array($this->select) ? $this->select : [$this->select];
         foreach ($columnNames as $columnName) {
             // check if the column was added by a withColumn, if not add it
             if (!array_key_exists($columnName, $this->getAsColumns())) {
@@ -1957,12 +1985,12 @@ class ModelCriteria extends BaseModelCriteria
             $column = $tableMap->getColumnByPhpName($phpName);
             $realColumnName = $class.'.'.$column->getName();
 
-            return array($column, $realColumnName);
+            return [$column, $realColumnName];
         } elseif (isset($subQueryCriteria->asColumns[$phpName])) {
             // aliased column
-            return array(null, $class.'.'.$phpName);
+            return [null, $class.'.'.$phpName];
         } elseif ($failSilently) {
-            return array(null, null);
+            return [null, null];
         } else {
             throw new PropelException(sprintf('Unknown column "%s" in the subQuery with alias "%s".', $phpName, $class));
         }
@@ -2051,7 +2079,7 @@ class ModelCriteria extends BaseModelCriteria
      */
     public function getParams()
     {
-        $params = array();
+        $params = [];
         $dbMap = Propel::getServiceContainer()->getDatabaseMap($this->getDbName());
 
         foreach ($this->getMap() as $criterion) {
@@ -2095,14 +2123,14 @@ class ModelCriteria extends BaseModelCriteria
     public function __call($name, $arguments)
     {
         // Maybe it's a magic call to one of the methods supporting it, e.g. 'findByTitle'
-        static $methods = array('findBy', 'findOneBy', 'requireOneBy', 'filterBy', 'orderBy', 'groupBy');
+        static $methods = ['findBy', 'findOneBy', 'requireOneBy', 'filterBy', 'orderBy', 'groupBy'];
         foreach ($methods as $method) {
             if (0 === strpos($name, $method)) {
                 $columns = substr($name, strlen($method));
-                if (in_array($method, array('findBy', 'findOneBy', 'requireOneBy')) && strpos($columns, 'And') !== false) {
+                if (in_array($method, ['findBy', 'findOneBy', 'requireOneBy']) && strpos($columns, 'And') !== false) {
                     $method = $method . 'Array';
                     $columns = explode('And', $columns);
-                    $conditions = array();
+                    $conditions = [];
                     foreach ($columns as $column) {
                         $conditions[$column] = array_shift($arguments);
                     }
@@ -2111,20 +2139,21 @@ class ModelCriteria extends BaseModelCriteria
                     array_unshift($arguments, $columns);
                 }
 
-                return call_user_func_array(array($this, $method), $arguments);
+                return call_user_func_array([$this, $method], $arguments);
             }
         }
 
         // Maybe it's a magic call to a qualified joinWith method, e.g. 'leftJoinWith' or 'joinWithAuthor'
         if (false !== ($pos = stripos($name, 'joinWith'))) {
             $type = substr($name, 0, $pos);
-            if (in_array($type, array('left', 'right', 'inner'))) {
+            if (in_array($type, ['left', 'right', 'inner'])) {
                 $joinType = strtoupper($type) . ' JOIN';
             } else {
                 $joinType = Criteria::INNER_JOIN;
             }
 
-            if (!$relation = substr($name, $pos + 8)) {
+            $relation = substr($name, $pos + 8);
+            if (!$relation) {
                 $relation = $arguments[0];
             }
 
@@ -2134,7 +2163,7 @@ class ModelCriteria extends BaseModelCriteria
         // Maybe it's a magic call to a qualified join method, e.g. 'leftJoin'
         if (($pos = strpos($name, 'Join')) > 0) {
             $type = substr($name, 0, $pos);
-            if (in_array($type, array('left', 'right', 'inner'))) {
+            if (in_array($type, ['left', 'right', 'inner'])) {
                 $joinType = strtoupper($type) . ' JOIN';
                 // Test if first argument is supplied, else don't provide an alias to joinXXX (default value)
                 if (!isset($arguments[0])) {
@@ -2143,7 +2172,7 @@ class ModelCriteria extends BaseModelCriteria
                 array_push($arguments, $joinType);
                 $method = lcfirst(substr($name, $pos));
 
-                return call_user_func_array(array($this, $method), $arguments);
+                return call_user_func_array([$this, $method], $arguments);
             }
         }
 

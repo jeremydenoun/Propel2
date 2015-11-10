@@ -84,7 +84,7 @@ class ValidateBehavior extends Behavior
      */
     public function getParametersFromColumnName($columnName = null)
     {
-        $array = array();
+        $array = [];
         if (null !== $columnName) {
             $this->cleanupParameters();
             foreach ($this->getParameters() as $key => $parameter) {
@@ -106,7 +106,7 @@ class ValidateBehavior extends Behavior
     public function removeParametersFromColumnName($columnName = null)
     {
         if (null !== $columnName) {
-            $newParams = array();
+            $newParams = [];
             $parameters = $this->getParameters();
             foreach ($parameters as $key => $parameter) {
                 if ($parameter['column'] != $columnName) {
@@ -128,13 +128,13 @@ class ValidateBehavior extends Behavior
     {
         if (!count($this->getParameters())) {
             $pk = $this->getTable()->getPrimaryKey();
-            $parameters = array('auto_rule' => array(
+            $parameters = ['auto_rule' => [
                 'column'     => $pk[0]->getName(),
                 'validators' => 'Type',
-                'options'    => array(
+                'options'    => [
                     'type'   => $pk[0]->getPhpType(),
-                ),
-            ));
+                ],
+            ]];
             $this->setParameters($parameters);
         }
     }
@@ -148,7 +148,7 @@ class ValidateBehavior extends Behavior
     {
         if (null !== $params) {
             $parameters = $this->getParameters();
-            $out = array();
+            $out = [];
             $i = 1;
             foreach ($parameters as $key => $parameter) {
                 $out["rule$i"] = $parameter;
@@ -187,7 +187,7 @@ class ValidateBehavior extends Behavior
     protected function addLoadValidatorMetadataMethod()
     {
         $params = $this->getParameters();
-        $constraints = array();
+        $constraints = [];
 
         foreach ($params as $key => $properties) {
             if (!isset($properties['column'])) {
@@ -223,7 +223,7 @@ class ValidateBehavior extends Behavior
             $this->builder->declareClass($classConstraint);
         }
 
-        return $this->renderTemplate('objectLoadValidatorMetadata', array('constraints' => $constraints));
+        return $this->renderTemplate('objectLoadValidatorMetadata', ['constraints' => $constraints]);
     }
 
     /**
@@ -235,9 +235,9 @@ class ValidateBehavior extends Behavior
         $table = $this->getTable();
         $foreignKeys = $table->getForeignKeys();
         $hasForeignKeys = (count($foreignKeys) != 0);
-        $aVarNames = array();
-        $refFkVarNames = array();
-        $collVarNames = array();
+        $aVarNames = [];
+        $refFkVarNames = [];
+        $collVarNames = [];
 
         if ($hasForeignKeys) {
             foreach ($foreignKeys as $fk) {
@@ -253,12 +253,12 @@ class ValidateBehavior extends Behavior
             }
         }
 
-        return $this->renderTemplate('objectValidate', array(
+        return $this->renderTemplate('objectValidate', [
             'hasForeignKeys' => $hasForeignKeys,
             'aVarNames'      => $aVarNames,
             'refFkVarNames'  => $refFkVarNames,
             'collVarNames'   => $collVarNames
-        ));
+        ]);
     }
 
     /**

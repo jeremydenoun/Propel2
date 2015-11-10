@@ -22,7 +22,7 @@ use Propel\Runtime\DataFetcher\DataFetcherInterface;
  */
 class ArrayFormatter extends AbstractFormatter
 {
-    protected $alreadyHydratedObjects = array();
+    protected $alreadyHydratedObjects = [];
 
     protected $emptyVariable;
 
@@ -44,7 +44,8 @@ class ArrayFormatter extends AbstractFormatter
 
         $items = [];
         foreach ($dataFetcher as $row) {
-            if ($object = &$this->getStructuredArrayFromRow($row)) {
+            $object = &$this->getStructuredArrayFromRow($row);
+            if ($object) {
                 $items[] =& $object;
             }
         }
@@ -53,8 +54,8 @@ class ArrayFormatter extends AbstractFormatter
             $collection[] = $item;
         }
 
-        $this->currentObjects = array();
-        $this->alreadyHydratedObjects = array();
+        $this->currentObjects = [];
+        $this->alreadyHydratedObjects = [];
         $dataFetcher->close();
 
         return $collection;
@@ -81,12 +82,13 @@ class ArrayFormatter extends AbstractFormatter
         }
 
         foreach ($dataFetcher as $row) {
-            if ($object = &$this->getStructuredArrayFromRow($row)) {
+            $object = &$this->getStructuredArrayFromRow($row);
+            if ($object) {
                 $result = &$object;
             }
         }
-        $this->currentObjects = array();
-        $this->alreadyHydratedObjects = array();
+        $this->currentObjects = [];
+        $this->alreadyHydratedObjects = [];
         $dataFetcher->close();
 
         return $result;
@@ -101,7 +103,7 @@ class ArrayFormatter extends AbstractFormatter
      */
     public function formatRecord(ActiveRecordInterface $record = null)
     {
-        return $record ? $record->toArray() : array();
+        return $record ? $record->toArray() : [];
     }
 
     public function isObjectFormatter()
@@ -136,14 +138,14 @@ class ArrayFormatter extends AbstractFormatter
             $mainObjectIsNew = true;
         }
 
-        $hydrationChain = array();
+        $hydrationChain = [];
 
         // related objects added using with()
         foreach ($this->getWith() as $relAlias => $modelWith) {
 
             // determine class to use
             if ($modelWith->isSingleTableInheritance()) {
-                $class = call_user_func(array($modelWith->getTableMap(), 'getOMClass'), $row, $col, false);
+                $class = call_user_func([$modelWith->getTableMap(), 'getOMClass'], $row, $col, false);
                 $refl = new \ReflectionClass($class);
                 if ($refl->isAbstract()) {
                     $col += constant('Map\\'.$class . 'TableMap::NUM_COLUMNS');
@@ -155,7 +157,7 @@ class ArrayFormatter extends AbstractFormatter
 
             // hydrate related object or take it from registry
             $key = call_user_func(
-                array($modelWith->getTableMap(), 'getPrimaryKeyHashFromRow'),
+                [$modelWith->getTableMap(), 'getPrimaryKeyHashFromRow'],
                 $row,
                 $col,
                 $this->getDataFetcher()->getIndexType()
@@ -166,7 +168,7 @@ class ArrayFormatter extends AbstractFormatter
             if (!isset($this->alreadyHydratedObjects[$relAlias][$key])) {
 
                 if ($secondaryObject->isPrimaryKeyNull()) {
-                    $this->alreadyHydratedObjects[$relAlias][$key] = array();
+                    $this->alreadyHydratedObjects[$relAlias][$key] = [];
                 } else {
                     $this->alreadyHydratedObjects[$relAlias][$key] = $secondaryObject->toArray();
                 }

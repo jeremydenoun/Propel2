@@ -29,11 +29,11 @@ class DelegateBehavior extends Behavior
     const MANY_TO_ONE = 2;
 
     // default parameters value
-    protected $parameters = array(
+    protected $parameters = [
         'to' => ''
-    );
+    ];
 
-    protected $delegates = array();
+    protected $delegates = [];
 
     /**
      * Lists the delegates and checks that the behavior can use them,
@@ -130,7 +130,8 @@ class DelegateBehavior extends Behavior
             }
                 $script .= "
 if (is_callable(array('$ARFQCN', \$name))) {
-    if (!\$delegate = \$this->get$relationName()) {
+    \$delegate = \$this->get$relationName();
+    if (!\$delegate) {
         \$delegate = new $ARClassName();
         \$this->set$relationName(\$delegate);
     }

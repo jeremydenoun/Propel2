@@ -22,13 +22,13 @@ use Propel\Generator\Model\ForeignKey;
 class AggregateColumnBehavior extends Behavior
 {
     // default parameters value
-    protected $parameters = array(
+    protected $parameters = [
         'name'           => null,
         'expression'     => null,
         'condition'      => null,
         'foreign_table'  => null,
         'foreign_schema' => null,
-    );
+    ];
 
     /**
      * Multiple aggregates on the same table is OK.
@@ -46,16 +46,17 @@ class AggregateColumnBehavior extends Behavior
     public function modifyTable()
     {
         $table = $this->getTable();
-        if (!$columnName = $this->getParameter('name')) {
+        $columnName = $this->getParameter('name');
+        if (!$columnName) {
             throw new \InvalidArgumentException(sprintf('You must define a \'name\' parameter for the \'aggregate_column\' behavior in the \'%s\' table', $table->getName()));
         }
 
         // add the aggregate column if not present
         if (!$table->hasColumn($columnName)) {
-            $table->addColumn(array(
+            $table->addColumn([
                 'name'    => $columnName,
                 'type'    => 'INTEGER',
-            ));
+            ]);
         }
 
         // add a behavior in the foreign table to autoupdate the aggregate column
@@ -64,9 +65,9 @@ class AggregateColumnBehavior extends Behavior
             $relationBehavior = new AggregateColumnRelationBehavior();
             $relationBehavior->setName('aggregate_column_relation');
             $relationBehavior->setId('aggregate_column_relation_'.$this->getId());
-            $relationBehavior->addParameter(array('name' => 'foreign_table', 'value' => $table->getName()));
-            $relationBehavior->addParameter(array('name' => 'aggregate_name', 'value' => $this->getColumn()->getPhpName()));
-            $relationBehavior->addParameter(array('name' => 'update_method', 'value' => 'update' . $this->getColumn()->getPhpName()));
+            $relationBehavior->addParameter(['name' => 'foreign_table', 'value' => $table->getName()]);
+            $relationBehavior->addParameter(['name' => 'aggregate_name', 'value' => $this->getColumn()->getPhpName()]);
+            $relationBehavior->addParameter(['name' => 'update_method', 'value' => 'update' . $this->getColumn()->getPhpName()]);
             $foreignTable->addBehavior($relationBehavior);
         }
     }
@@ -89,12 +90,12 @@ class AggregateColumnBehavior extends Behavior
      */
     protected function addObjectCompute(ObjectBuilder $builder)
     {
-        $conditions = array();
+        $conditions = [];
         if ($this->getParameter('condition')) {
             $conditions[] = $this->getParameter('condition');
         }
 
-        $bindings = array();
+        $bindings = [];
         $database = $this->getTable()->getDatabase();
 
         if ($this->getForeignKey()->isPolymorphic()) {
@@ -119,18 +120,18 @@ class AggregateColumnBehavior extends Behavior
             implode(' AND ', $conditions)
         );
 
-        return $this->renderTemplate('objectCompute', array(
+        return $this->renderTemplate('objectCompute', [
             'column'   => $this->getColumn(),
             'sql'      => $sql,
             'bindings' => $bindings,
-        ));
+        ]);
     }
 
     protected function addObjectUpdate()
     {
-        return $this->renderTemplate('objectUpdate', array(
+        return $this->renderTemplate('objectUpdate', [
             'column'  => $this->getColumn(),
-        ));
+        ]);
     }
 
     protected function getForeignTable()

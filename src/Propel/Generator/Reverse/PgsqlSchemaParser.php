@@ -31,7 +31,7 @@ class PgsqlSchemaParser extends AbstractSchemaParser
      * @var array
      */
     /** Map MySQL native types to Propel (JDBC) types. */
-    private static $pgsqlTypeMap = array(
+    private static $pgsqlTypeMap = [
         'bool'        => PropelTypes::BOOLEAN,
         'boolean'     => PropelTypes::BOOLEAN,
         'tinyint'     => PropelTypes::TINYINT,
@@ -69,16 +69,16 @@ class PgsqlSchemaParser extends AbstractSchemaParser
         'time without time zone' => PropelTypes::TIME,
         'timestamp without time zone' => PropelTypes::TIMESTAMP,
         'double precision' => PropelTypes::DOUBLE,
-    );
+    ];
 
-    protected static $defaultTypeSizes = array(
+    protected static $defaultTypeSizes = [
         'char'      => 1,
         'character' => 1,
         'integer'   => 32,
         'bigint'    => 64,
         'smallint'  => 16,
         'double precision' => 54
-    );
+    ];
 
     /**
      * Gets a type mapping from native types to Propel types
@@ -97,9 +97,9 @@ class PgsqlSchemaParser extends AbstractSchemaParser
      * @param  Table[]  $additionalTables
      * @return integer
      */
-    public function parse(Database $database, array $additionalTables = array())
+    public function parse(Database $database, array $additionalTables = [])
     {
-        $tableWraps = array();
+        $tableWraps = [];
 
         $this->parseTables($tableWraps, $database);
         foreach ($additionalTables as $table) {
@@ -147,11 +147,12 @@ class PgsqlSchemaParser extends AbstractSchemaParser
             $params[] = $filterTable->getCommonName();
 
         } else if (!$database->getSchema()) {
-            $stmt = $this->dbh->query('SELECT current_schemas(false)');
-            $searchPathString = substr($stmt->fetchColumn(), 1, -1);
+            $stmt = $this->dbh->query('SELECT schema_name FROM information_schema.schemata');
+            $searchPath = [];
 
-            $params = [];
-            $searchPath = explode(',', $searchPathString);
+            while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
+                $searchPath[] = $row['schema_name'];
+            }
 
             foreach ($searchPath as &$path) {
                 $params[] = $path;
@@ -186,13 +187,16 @@ class PgsqlSchemaParser extends AbstractSchemaParser
                 $table->setSchema($namespaceName);
             }
             $table->setIdMethod($database->getDefaultIdMethod());
-            $database->addTable($table);
+            $table->setDatabase($database);
+            if (!$database->hasTable($table->getName())) {
+                $database->addTable($table);
 
-            // Create a wrapper to hold these tables and their associated OID
-            $wrap = new \stdClass;
-            $wrap->table = $table;
-            $wrap->oid = $oid;
-            $tableWraps[] = $wrap;
+                // Create a wrapper to hold these tables and their associated OID
+                $wrap = new \stdClass;
+                $wrap->table = $table;
+                $wrap->oid = $oid;
+                $tableWraps[] = $wrap;
+            }
         }
 
     }
@@ -349,7 +353,7 @@ class PgsqlSchemaParser extends AbstractSchemaParser
         $stmt->bindValue(1, $oid);
         $stmt->execute();
 
-        $foreignKeys = array();
+        $foreignKeys = [];
         while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
 
             $name = $row['conname'];
@@ -451,7 +455,7 @@ class PgsqlSchemaParser extends AbstractSchemaParser
             WHERE c.oid = ? AND a.attnum = ? AND NOT a.attisdropped
             ORDER BY a.attnum");
 
-        $indexes = array();
+        $indexes = [];
 
         while ($row = $stmt->fetch(\PDO::FETCH_ASSOC)) {
             $name = $row['idxname'];
