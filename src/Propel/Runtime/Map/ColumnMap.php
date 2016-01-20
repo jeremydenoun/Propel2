@@ -502,10 +502,7 @@ class ColumnMap
     {
         if (false !== ($pos = strrpos($name, '.'))) {
             $name = substr($name, $pos + 1);
-<<<<<<< HEAD
-=======
 	     $name = trim($name,"\t\n\r\0\x0B`'");
->>>>>>> dbf9162... proposal for remove quote in column normalization
         }
 
         return strtoupper($name);
