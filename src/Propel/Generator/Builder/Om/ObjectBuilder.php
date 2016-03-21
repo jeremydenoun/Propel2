@@ -1109,11 +1109,11 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             return null;
         }
         \$valueSet = " . $this->getTableMapClassName() . "::getValueSet(" . $this->getColumnConstant($column) . ");
-        if (!isset(\$valueSet[\$this->$clo])) {
+        if (!isset(\$valueSet[\$this->$clo]) && array_search(\$this->$clo, \$valueSet) === false) {
             throw new PropelException('Unknown stored enum key: ' . \$this->$clo);
         }
 
-        return \$valueSet[\$this->$clo];";
+        return (isset(\$valueSet[\$this->$clo]) ? \$valueSet[\$this->$clo] : \$this->$clo);";
     }
 
     /**
@@ -2119,6 +2119,9 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                     }
                     $script .= "
             \$this->$clo = (null !== \$col) ? PropelDateTime::newInstance(\$col, null, '$dateTimeClass') : null;";
+                } elseif ($col->isEnumType()) {
+                    $script .= "
+            \$this->$clo = (null !== \$col) ? \$col : null;";
                 } elseif ($col->isPhpPrimitiveType()) {
                     $script .= "
             \$this->$clo = (null !== \$col) ? (".$col->getPhpType().") \$col : null;";
