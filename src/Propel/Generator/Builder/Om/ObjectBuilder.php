@@ -1895,7 +1895,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             if (!in_array(\$v, \$valueSet)) {
                 throw new PropelException(sprintf('Value \"%s\" is not accepted in this enumerated column', \$v));
             }
-            \$v = array_search(\$v, \$valueSet);
+            ".( strtoupper($col->getDomain()->getSqlType()) == "TINYINT" ? '$v = array_search($v, $valueSet);' : "")."
         }
 
         if (\$this->$clo !== \$v) {
