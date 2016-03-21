@@ -405,7 +405,10 @@ DROP TABLE IF EXISTS " . $this->quoteIdentifier($table->getName()) . ";
                 } elseif (in_array($col->getType(), [PropelTypes::BOOLEAN, PropelTypes::BOOLEAN_EMU])) {
                     $default .= $this->getBooleanString($defaultValue->getValue());
                 } elseif ($col->getType() == PropelTypes::ENUM) {
-                    $default .= array_search($defaultValue->getValue(), $col->getValueSet());
+                    if ($col->getAttribute('sqlType'))
+                        $default .= $this->quote($defaultValue->getValue());
+                    else
+                        $default .= array_search($defaultValue->getValue(), $col->getValueSet());
                 } elseif ($col->isPhpArrayType()) {
                     $value = $this->getPhpArrayString($defaultValue->getValue());
                     if (null === $value) {
