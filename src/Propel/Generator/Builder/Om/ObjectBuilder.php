@@ -1134,15 +1134,15 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
         }
 
         $script .= "
-        if (null === \$this->$clo) {
+        if (null === \$this->$clo || (is_string(\$this->$clo) && \$this->$clo == \"\")) {
             return null;
         }
         \$valueSet = " . $this->getTableMapClassName() . "::getValueSet(" . $this->getColumnConstant($column) . ");
-        if (!isset(\$valueSet[\$this->$clo])) {
+        if (!isset(\$valueSet[\$this->$clo]) && array_search(\$this->$clo, \$valueSet) === false) {
             throw new PropelException('Unknown stored enum key: ' . \$this->$clo);
         }
 
-        return \$valueSet[\$this->$clo];";
+        return (isset(\$valueSet[\$this->$clo]) ? \$valueSet[\$this->$clo] : \$this->$clo);";
     }
 
     /**
@@ -1912,7 +1912,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             if (!in_array(\$v, \$valueSet)) {
                 throw new PropelException(sprintf('Value \"%s\" is not accepted in this enumerated column', \$v));
             }
-            \$v = array_search(\$v, \$valueSet);
+            ".( strtoupper($col->getDomain()->getSqlType()) == "TINYINT" ? '$v = array_search($v, $valueSet);' : "")."
         }
 
         if (\$this->$clo !== \$v) {
@@ -2276,6 +2276,9 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                     }
                     $script .= "
             \$this->$clo = (null !== \$col) ? PropelDateTime::newInstance(\$col, null, '$dateTimeClass') : null;";
+                } elseif ($col->isEnumType()) {
+                    $script .= "
+            \$this->$clo = (null !== \$col) ? (is_numeric(\$col) ? (".$col->getPhpType().")\$col : \$col) : null;";
                 } elseif ($col->isPhpPrimitiveType()) {
                     $script .= "
             \$this->$clo = (null !== \$col) ? (".$col->getPhpType().") \$col : null;";
