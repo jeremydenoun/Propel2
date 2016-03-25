@@ -1105,7 +1105,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
         }
 
         $script .= "
-        if (null === \$this->$clo) {
+        if (null === \$this->$clo || (is_string(\$this->$clo) && \$this->$clo == "")) {
             return null;
         }
         \$valueSet = " . $this->getTableMapClassName() . "::getValueSet(" . $this->getColumnConstant($column) . ");
