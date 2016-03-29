@@ -10,6 +10,7 @@
 
 namespace Propel\Generator\Platform;
 
+use Propel\Common\Util\SetColumnConverter;
 use Propel\Generator\Config\GeneratorConfigInterface;
 use Propel\Generator\Model\Column;
 use Propel\Generator\Model\Database;
@@ -405,10 +406,14 @@ DROP TABLE IF EXISTS " . $this->quoteIdentifier($table->getName()) . ";
                 } elseif (in_array($col->getType(), [PropelTypes::BOOLEAN, PropelTypes::BOOLEAN_EMU])) {
                     $default .= $this->getBooleanString($defaultValue->getValue());
                 } elseif ($col->getType() == PropelTypes::ENUM) {
-                    if ($col->getAttribute('sqlType'))
-                        $default .= $this->quote($defaultValue->getValue());
-                    else
-                        $default .= array_search($defaultValue->getValue(), $col->getValueSet());
+                    $default .= array_search($defaultValue->getValue(), $col->getValueSet());
+                } elseif ($col->isSetType()) {
+                    $val = trim($defaultValue->getValue());
+                    $values = [];
+                    foreach (explode(',', $val) as $v) {
+                        $values[] = trim($v);
+                    }
+                    $default .= SetColumnConverter::convertToInt($values, $col->getValueSet());
                 } elseif ($col->isPhpArrayType()) {
                     $value = $this->getPhpArrayString($defaultValue->getValue());
                     if (null === $value) {
@@ -1339,15 +1344,16 @@ if (is_resource($columnValueAccessor)) {
      * $this->id = $con->lastInsertId();
      * </code>
      */
-    public function getIdentifierPhp($columnValueMutator, $connectionVariableName = '$con', $sequenceName = '', $tab = "            ")
+    public function getIdentifierPhp($columnValueMutator, $connectionVariableName = '$con', $sequenceName = '', $tab = "            ", $phpType = null)
     {
         return sprintf(
             "
-%s%s = %s->lastInsertId(%s);",
+%s%s = %s%s->lastInsertId(%s);",
             $tab,
             $columnValueMutator,
             $connectionVariableName,
-            $sequenceName ? ("'" . $sequenceName . "'") : ''
+            $sequenceName ? ("'" . $sequenceName . "'") : '',
+            $phpType ? '('.$phpType.') ' : ''
         );
     }
 

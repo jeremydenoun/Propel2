@@ -96,7 +96,7 @@ class PropelModelPager implements \IteratorAggregate, \Countable
         $this->con = $con;
         $hasMaxRecordLimit = false !== $this->getMaxRecordLimit();
         $maxRecordLimit = $this->getMaxRecordLimit();
-
+        
         $qForCount = clone $this->getQuery();
         $count = $qForCount
             ->offset(0)
@@ -140,6 +140,12 @@ class PropelModelPager implements \IteratorAggregate, \Countable
     public function getResults()
     {
         if (null === $this->results) {
+            $queryKey = method_exists($this->getQuery(), 'getQueryKey') ? $this->getQuery()->getQueryKey() : null;
+            if ($queryKey) {
+                $newQueryKey = sprintf('%s offset %s limit %s', $queryKey, $this->getQuery()->getOffset(), $this->getQuery()->getLimit());
+                $this->getQuery()->setQueryKey($newQueryKey);
+            }
+            
             $this->results = $this->getQuery()
                 ->find($this->con)
             ;
@@ -263,7 +269,7 @@ class PropelModelPager implements \IteratorAggregate, \Countable
      */
     public function getFirstPage()
     {
-        return 1;
+        return $this->nbResults === 0 ? 0 : 1;
     }
 
     /**
@@ -317,7 +323,7 @@ class PropelModelPager implements \IteratorAggregate, \Countable
     public function setPage($page)
     {
         $this->page = (int) $page;
-        if ($this->page <= 0) {
+        if ($this->page <= 0 && $this->nbResults > 0) {
             // set first page, which depends on a maximum set
             $this->page = $this->getMaxPerPage() ? 1 : 0;
         }

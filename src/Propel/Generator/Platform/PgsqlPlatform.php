@@ -59,6 +59,7 @@ class PgsqlPlatform extends DefaultPlatform
         $this->setSchemaDomainMapping(new Domain(PropelTypes::OBJECT, 'BYTEA'));
         $this->setSchemaDomainMapping(new Domain(PropelTypes::PHP_ARRAY, 'TEXT'));
         $this->setSchemaDomainMapping(new Domain(PropelTypes::ENUM, 'INT2'));
+        $this->setSchemaDomainMapping(new Domain(PropelTypes::SET, 'INT4'));
         $this->setSchemaDomainMapping(new Domain(PropelTypes::DECIMAL, 'NUMERIC'));
     }
 
@@ -213,8 +214,7 @@ SET search_path TO public;
 
     public function getAddTablesDDL(Database $database)
     {
-        $ret = $this->getBeginDDL();
-        $ret .= $this->getAddSchemasDDL($database);
+        $ret = $this->getAddSchemasDDL($database);
 
         foreach ($database->getTablesForSql() as $table) {
             $this->normalizeTable($table);
@@ -229,9 +229,32 @@ SET search_path TO public;
         foreach ($database->getTablesForSql() as $table) {
             $ret .= $this->getAddForeignKeysDDL($table);
         }
-        $ret .= $this->getEndDDL();
+
+        if (!empty($ret)) {
+            $ret = $this->getBeginDDL() . $ret . $this->getEndDDL();
+        }
 
         return $ret;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getBeginDDL()
+    {
+        return "
+BEGIN;
+";
+    }
+    
+    /**
+     * @return string
+     */
+    public function getEndDDL()
+    {
+        return "
+COMMIT;
+";
     }
 
     /**
@@ -656,18 +679,19 @@ DROP SEQUENCE %s CASCADE;
      * Warning: duplicates logic from PgsqlAdapter::getId().
      * Any code modification here must be ported there.
      */
-    public function getIdentifierPhp($columnValueMutator, $connectionVariableName = '$con', $sequenceName = '', $tab = "            ")
+    public function getIdentifierPhp($columnValueMutator, $connectionVariableName = '$con', $sequenceName = '', $tab = "            ", $phpType = null)
     {
         if (!$sequenceName) {
             throw new EngineException('PostgreSQL needs a sequence name to fetch primary keys');
         }
         $snippet = "
 \$dataFetcher = %s->query(\"SELECT nextval('%s')\");
-%s = \$dataFetcher->fetchColumn();";
+%s = %s\$dataFetcher->fetchColumn();";
         $script = sprintf($snippet,
             $connectionVariableName,
             $sequenceName,
-            $columnValueMutator
+            $columnValueMutator,
+            $phpType ? '('.$phpType.') ' : ''
         );
 
         return preg_replace('/^/m', $tab, $script);

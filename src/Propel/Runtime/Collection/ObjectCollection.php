@@ -47,6 +47,11 @@ class ObjectCollection extends Collection
         $this->rebuildIndex();
     }
 
+    public function setData($data) 
+    {
+        parent::setData($data);
+        $this->rebuildIndex();
+    }
     /**
      * Save all the elements in the collection
      *
@@ -275,6 +280,34 @@ class ObjectCollection extends Collection
     }
 
     /**
+     * Get an array representation of the column.
+     *
+     * <code>
+     *   $res = $userCollection->toKeyIndex('Name');
+     *
+     *   $res = array(
+     *       'peter',
+     *       'hans',
+     *       ...
+     *   )
+     * </code>
+     *
+     * @param string $columnName
+     *
+     * @return array
+     */
+    public function getColumnValues($columnName = 'PrimaryKey')
+    {
+        $ret = [];
+        $keyGetterMethod = 'get' . ucfirst($columnName);
+        foreach ($this as $obj) {
+            $ret[] = $obj->$keyGetterMethod();
+        }
+
+        return $ret;
+    }
+
+    /**
      * Makes an additional query to populate the objects related to the collection objects
      * by a certain relation
      *
@@ -292,8 +325,12 @@ class ObjectCollection extends Collection
         $relationMap = $this->getFormatter()->getTableMap()->getRelation($relation);
         if ($this->isEmpty()) {
             // save a useless query and return an empty collection
-            $coll = new ObjectCollection();
-            $coll->setModel($relationMap->getRightTable()->getClassName());
+            $relationClassName = $relationMap->getRightTable()->getClassName();
+            $collectionClassName = $relationMap->getRightTable()->getCollectionClassName();
+
+            $coll = new $collectionClassName();
+            $coll->setModel($relationClassName);
+            $coll->setFormatter($this->getFormatter());
 
             return $coll;
         }
@@ -394,10 +431,12 @@ class ObjectCollection extends Collection
             return;
         }
 
-        $pos = count($this->data);
+        $this->data[] = $value;
+        end($this->data);
+        $pos = key($this->data);
+
         $this->index[$value->hashCode()] = $pos;
         $this->indexSplHash[spl_object_hash($value)] = $value->hashCode();
-        $this->data[] = $value;
     }
 
     /**
@@ -414,9 +453,12 @@ class ObjectCollection extends Collection
         $hashCode = $value->hashCode();
 
         if (is_null($offset)) {
-            $this->index[$hashCode] = count($this->data);
-            $this->indexSplHash[spl_object_hash($value)] = $hashCode;
             $this->data[] = $value;
+            end($this->data);
+            $pos = key($this->data);
+
+            $this->index[$hashCode] = $pos;
+            $this->indexSplHash[spl_object_hash($value)] = $hashCode;
         } else {
             if (isset($this->data[$offset])) {
                 unset($this->indexSplHash[spl_object_hash($this->data[$offset])]);

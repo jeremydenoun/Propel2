@@ -10,6 +10,7 @@
 
 namespace Propel\Generator\Builder\Om;
 
+use Propel\Common\Util\SetColumnConverter;
 use Propel\Generator\Exception\EngineException;
 use Propel\Generator\Model\Column;
 use Propel\Generator\Model\CrossForeignKeys;
@@ -284,6 +285,11 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             '\Propel\Runtime\Map\TableMap'
         );
 
+        $baseClass = $this->getBaseClass();
+        if (strrpos($baseClass, '\\') !== false) {
+            $this->declareClasses($baseClass);
+        }
+
         $table = $this->getTable();
         if (!$table->isAlias()) {
             $this->addConstants($script);
@@ -448,6 +454,9 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                 $this->addColumnAttributeUnserializedComment($script, $col);
                 $this->addColumnAttributeUnserializedDeclaration($script, $col);
             }
+            if ($col->isSetType()) {
+                $this->addColumnAttributeConvertedDeclaration($script, $col);
+            }
         }
     }
 
@@ -460,10 +469,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
     protected function addColumnAttributeComment(&$script, Column $column)
     {
         if ($column->isTemporalType()) {
-            $cptype = $this->getBuildProperty('dateTimeClass');
-            if (!$cptype) {
-                $cptype = '\DateTime';
-            }
+            $cptype = $this->getDateTimeClass($column);
         } else {
             $cptype = $column->getPhpType();
         }
@@ -560,6 +566,18 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
     protected function addColumnAttributeUnserializedDeclaration(&$script, Column $column)
     {
         $clo = $column->getLowercasedName() . "_unserialized";
+        $script .= "
+    protected \$" . $clo . ";
+";
+    }
+
+    /**
+     * @param string &$script
+     * @param Column $column
+     */
+    protected function addColumnAttributeConvertedDeclaration(&$script, Column $column)
+    {
+        $clo = $column->getLowercasedName() . "_converted";
         $script .= "
     protected \$" . $clo . ";
 ";
@@ -724,10 +742,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             $clo = $column->getLowercasedName();
             $defaultValue = $this->getDefaultValueString($column);
             if ($column->isTemporalType()) {
-                $dateTimeClass = $this->getBuildProperty('generator.dateTime.dateTimeClass');
-                if (!$dateTimeClass) {
-                    $dateTimeClass = '\DateTime';
-                }
+                $dateTimeClass = $this->getDateTimeClass($column);
                 $script .= "
         \$this->".$clo." = PropelDateTime::newInstance($defaultValue, null, '$dateTimeClass');";
             } else {
@@ -773,10 +788,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
     {
         $clo = $column->getLowercasedName();
 
-        $dateTimeClass = $this->getBuildProperty('generator.dateTime.dateTimeClass');
-        if (!$dateTimeClass) {
-            $dateTimeClass = '\DateTime';
-        }
+        $dateTimeClass = $this->getDateTimeClass($column);
 
         $handleMysqlDate = false;
         if ($this->getPlatform() instanceof MysqlPlatform) {
@@ -875,10 +887,8 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
     {
         $clo = $column->getLowercasedName();
 
-        $dateTimeClass = $this->getBuildProperty('generator.dateTime.dateTimeClass');
-        if (!$dateTimeClass) {
-            $dateTimeClass = '\DateTime';
-        }
+        $dateTimeClass = $this->getDateTimeClass($column);
+
         $this->declareClasses($dateTimeClass);
         $defaultfmt = null;
 
@@ -903,7 +913,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
         if (\$format === null) {
             return \$this->$clo;
         } else {
-            return \$this->$clo instanceof \DateTime ? \$this->{$clo}->format(\$format) : null;
+            return \$this->$clo instanceof \DateTimeInterface ? \$this->{$clo}->format(\$format) : null;
         }";
     }
 
@@ -1005,10 +1015,30 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
      */
     protected function addBooleanAccessor(&$script, Column $column)
     {
+        $name = self::getBooleanAccessorName($column);
+        if (in_array($name, ClassTools::getPropelReservedMethods())) {
+            //TODO: Issue a warning telling the user to use default accessors
+            return; // Skip boolean accessors for reserved names
+        }
         $this->addDefaultAccessorComment($script, $column);
         $this->addBooleanAccessorOpen($script, $column);
         $this->addBooleanAccessorBody($script, $column);
         $this->addDefaultAccessorClose($script);
+    }
+
+    /**
+     * Returns the name to be used as boolean accessor name
+     *
+     * @param Column $column
+     * @return string
+     */
+    protected static function getBooleanAccessorName(Column $column)
+    {
+        $name = $column->getCamelCaseName();
+        if (!preg_match('/^(?:is|has)(?=[A-Z])/', $name)) {
+            $name = 'is' . ucfirst($name);
+        }
+        return $name;
     }
 
     /**
@@ -1019,10 +1049,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
      */
     public function addBooleanAccessorOpen(&$script, Column $column)
     {
-        $name = $column->getCamelCaseName();
-        if (!preg_match('/^(?:is|has)(?=[A-Z])/', $name)) {
-            $name = 'is' . ucfirst($name);
-        }
+        $name = self::getBooleanAccessorName($column);
         $visibility = $column->getAccessorVisibility();
 
         $script .= "
@@ -1119,6 +1146,79 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
     }
 
     /**
+     * Adds a SET column getter method.
+     *
+     * @param string &$script
+     * @param Column $column
+     */
+    protected function addSetAccessor(&$script, Column $column)
+    {
+        $this->addSetAccessorComment($script, $column);
+        $this->addDefaultAccessorOpen($script, $column);
+        $this->addSetAccessorBody($script, $column);
+        $this->addDefaultAccessorClose($script);
+    }
+
+    /**
+     * Add the comment for a SET column accessor method.
+     *
+     * @param string &$script
+     * @param Column $column
+     */
+    public function addSetAccessorComment(&$script, Column $column)
+    {
+        $clo = $column->getLowercasedName();
+
+        $script .= "
+    /**
+     * Get the [$clo] column value.
+     * " . $column->getDescription();
+        if ($column->isLazyLoad()) {
+            $script .= "
+     * @param      ConnectionInterface An optional ConnectionInterface connection to use for fetching this lazy-loaded column.";
+        }
+        $script .= "
+     * @return array|null
+     * @throws \\Propel\\Runtime\\Exception\\PropelException
+     */";
+    }
+
+    /**
+     * Adds the function body for a SET column accessor method.
+     *
+     * @param string &$script
+     * @param Column $column
+     */
+    protected function addSetAccessorBody(&$script, Column $column)
+    {
+        $clo = $column->getLowercasedName();
+        $cloConverted = $clo . '_converted';
+        if ($column->isLazyLoad()) {
+            $script .= $this->getAccessorLazyLoadSnippet($column);
+        }
+        $this->declareClasses(
+            'Propel\Common\Util\SetColumnConverter',
+            'Propel\Common\Exception\SetColumnConverterException'
+        );
+
+        $script .= "
+        if (null === \$this->$cloConverted) {
+            \$this->$cloConverted = array();
+        }
+        if (!\$this->$cloConverted && null !== \$this->$clo) {
+            \$valueSet = " . $this->getTableMapClassName() . "::getValueSet(" . $this->getColumnConstant($column) . ");
+            try {
+                \$this->$cloConverted = SetColumnConverter::convertIntToArray(\$this->$clo, \$valueSet);
+            } catch (SetColumnConverterException \$e) {
+                throw new PropelException('Unknown stored set key: ' . \$e->getValue(), \$e->getCode(), \$e);
+            }
+        }
+        
+        return \$this->$cloConverted;";
+    }
+
+
+    /**
      * Adds a tester method for an array column.
      *
      * @param string &$script
@@ -1130,9 +1230,10 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
         $cfc = $column->getPhpName();
         $visibility = $column->getAccessorVisibility();
         $singularPhpName = $column->getPhpSingularName();
+        $columnType = ($column->getType() === PropelTypes::PHP_ARRAY) ? 'array' : 'set';
         $script .= "
     /**
-     * Test the presence of a value in the [$clo] array column value.
+     * Test the presence of a value in the [$clo] $columnType column value.
      * @param      mixed \$value
      * ".$column->getDescription();
         if ($column->isLazyLoad()) {
@@ -1595,10 +1696,8 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
     {
         $clo = $col->getLowercasedName();
 
-        $dateTimeClass = $this->getBuildProperty('generator.dateTime.dateTimeClass');
-        if (!$dateTimeClass) {
-            $dateTimeClass = '\DateTime';
-        }
+        $dateTimeClass = $this->getDateTimeClass($col);
+
         $this->declareClasses($dateTimeClass, '\Propel\Runtime\Util\PropelDateTime');
 
         $this->addTemporalMutatorComment($script, $col);
@@ -1649,7 +1748,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
     /**
      * Sets the value of [$clo] column to a normalized version of the date/time value specified.
      * ".$col->getDescription()."
-     * @param  mixed \$v string, integer (timestamp), or \DateTime value.
+     * @param  mixed \$v string, integer (timestamp), or \DateTimeInterface value.
      *               Empty strings are treated as NULL.
      * @return \$this|".$this->getObjectClassName(true)." The current object (for fluent API support)
      */";
@@ -1712,9 +1811,10 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
         $cfc = $col->getPhpName();
         $visibility = $col->getAccessorVisibility();
         $singularPhpName = $col->getPhpSingularName();
+        $columnType = ($col->getType() === PropelTypes::PHP_ARRAY) ? 'array' : 'set';
         $script .= "
     /**
-     * Adds a value to the [$clo] array column value.
+     * Adds a value to the [$clo] $columnType column value.
      * @param  mixed \$value
      * ".$col->getDescription();
         if ($col->isLazyLoad()) {
@@ -1756,9 +1856,10 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
         $cfc = $col->getPhpName();
         $visibility = $col->getAccessorVisibility();
         $singularPhpName = $col->getPhpSingularName();
+        $columnType = ($col->getType() === PropelTypes::PHP_ARRAY) ? 'array' : 'set';
         $script .= "
     /**
-     * Removes a value from the [$clo] array column value.
+     * Removes a value from the [$clo] $columnType column value.
      * @param  mixed \$value
      * ".$col->getDescription();
         if ($col->isLazyLoad()) {
@@ -1836,6 +1937,63 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
      * Set the value of [$clo] column.
      * ".$column->getDescription()."
      * @param  string \$v new value
+     * @return \$this|".$this->getObjectClassName(true)." The current object (for fluent API support)
+     * @throws \\Propel\\Runtime\\Exception\\PropelException
+     */";
+    }
+
+    /**
+     * Adds a setter for SET column mutator.
+     * 
+     * @param string &$script The script will be modified in this method.
+     * @param Column $col     The current column.
+     * @see parent::addColumnMutators()
+     */
+    protected function addSetMutator(&$script, Column $col)
+    {
+        $clo = $col->getLowercasedName();
+        $this->addSetMutatorComment($script, $col);
+        $this->addMutatorOpenOpen($script, $col);
+        $this->addMutatorOpenBody($script, $col);
+        $cloConverted = $clo . '_converted';
+
+        $this->declareClasses(
+            'Propel\Common\Util\SetColumnConverter',
+            'Propel\Common\Exception\SetColumnConverterException'
+        );
+
+        $script .= "
+        if (\$this->$cloConverted === null || count(array_diff(\$this->$cloConverted, \$v)) > 0 || count(array_diff(\$v, \$this->$cloConverted)) > 0) {
+            \$valueSet = " . $this->getTableMapClassName() . "::getValueSet(" . $this->getColumnConstant($col) . ");
+            try {
+                \$v = SetColumnConverter::convertToInt(\$v, \$valueSet);
+            } catch (SetColumnConverterException \$e) {
+                throw new PropelException(sprintf('Value \"%s\" is not accepted in this set column', \$e->getValue()), \$e->getCode(), \$e);
+            }
+            if (\$this->$clo !== \$v) {
+                \$this->$cloConverted = null;
+                \$this->$clo = \$v;
+                \$this->modifiedColumns[".$this->getColumnConstant($col)."] = true;
+            }
+        }
+";
+        $this->addMutatorClose($script, $col);
+    }
+
+    /**
+     * Adds the comment for a SET column mutator.
+     *
+     * @param string &$script
+     * @param Column $column
+     */
+    public function addSetMutatorComment(&$script, Column $column)
+    {
+        $clo = $column->getLowercasedName();
+        $script .= "
+    /**
+     * Set the value of [$clo] column.
+     * ".$column->getDescription()."
+     * @param  array \$v new value
      * @return \$this|".$this->getObjectClassName(true)." The current object (for fluent API support)
      * @throws \\Propel\\Runtime\\Exception\\PropelException
      */";
@@ -2098,10 +2256,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                 \$this->$clo = null;
             }";
                 } elseif ($col->isTemporalType()) {
-                    $dateTimeClass = $this->getBuildProperty('generator.dateTime.dateTimeClass');
-                    if (!$dateTimeClass) {
-                        $dateTimeClass = '\DateTime';
-                    }
+                    $dateTimeClass = $this->getDateTimeClass($col);
                     $handleMysqlDate = false;
                     if ($this->getPlatform() instanceof MysqlPlatform) {
                         if ($col->getType() === PropelTypes::TIMESTAMP) {
@@ -2135,6 +2290,11 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                     $script .= "
             \$this->$clo = \$col;
             \$this->$cloUnserialized = null;";
+                } elseif ($col->isSetType()) {
+                    $cloConverted = $clo . '_converted';
+                    $script .= "
+            \$this->$clo = \$col;
+            \$this->$cloConverted = null;";
                 } elseif ($col->isPhpObjectType()) {
                     $script .= "
             \$this->$clo = (null !== \$col) ? new ".$col->getPhpType()."(\$col) : null;";
@@ -2411,7 +2571,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             foreach ($fks as $fk) {
                 $script .= "
             if (null !== \$this->" . $this->getFKVarName($fk) . ") {
-                {$this->addToArrayKeyLookUp($fk->getForeignTable(), false)}
+                {$this->addToArrayKeyLookUp($fk->getPhpName(), $fk->getForeignTable(), false)}
                 \$result[\$key] = \$this->" . $this->getFKVarName($fk) . "->toArray(\$keyType, \$includeLazyLoadColumns,  \$alreadyDumpedObjects, true);
             }";
             }
@@ -2419,13 +2579,13 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                 if ($fk->isLocalPrimaryKey()) {
                     $script .= "
             if (null !== \$this->" . $this->getPKRefFKVarName($fk) . ") {
-                {$this->addToArrayKeyLookUp($fk->getTable(), false)}
+                {$this->addToArrayKeyLookUp($fk->getRefPhpName(), $fk->getTable(), false)}
                 \$result[\$key] = \$this->" . $this->getPKRefFKVarName($fk) . "->toArray(\$keyType, \$includeLazyLoadColumns, \$alreadyDumpedObjects, true);
             }";
                 } else {
                     $script .= "
             if (null !== \$this->" . $this->getRefFKCollVarName($fk) . ") {
-                {$this->addToArrayKeyLookUp($fk->getTable(), true)}
+                {$this->addToArrayKeyLookUp($fk->getRefPhpName(), $fk->getTable(), true)}
                 \$result[\$key] = \$this->" . $this->getRefFKCollVarName($fk) . "->toArray(null, false, \$keyType, \$includeLazyLoadColumns, \$alreadyDumpedObjects);
             }";
                 }
@@ -2444,9 +2604,12 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
      * Adds the switch-statement for looking up the array-key name for toArray
      * @see toArray
      */
-    protected function addToArrayKeyLookUp(Table $table, $plural)
+    protected function addToArrayKeyLookUp($phpName, Table $table, $plural)
     {
-        $phpName = $table->getPhpName();
+        if($phpName == "") {
+            $phpName = $table->getPhpName();  
+        }
+        
         $camelCaseName = $table->getCamelCaseName();
         $fieldName = $table->getName();
 
@@ -2673,6 +2836,19 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                 if (isset(\$valueSet[\$value])) {
                     \$value = \$valueSet[\$value];
                 }";
+            } elseif ($col->isSetType()) {
+                $this->declareClasses(
+                    'Propel\Common\Util\SetColumnConverter',
+                    'Propel\Common\Exception\SetColumnConverterException'
+                );
+                $script .= "
+                \$valueSet = " . $this->getTableMapClassName() . "::getValueSet(" . $this->getColumnConstant($col) . ");
+                try {
+                    \$value = SetColumnConverter::convertIntToArray(\$value, \$valueSet);
+                } catch (SetColumnConverterException \$e) {
+                    throw new PropelException('Unknown stored set key: ' . \$e->getValue(), \$e->getCode(), \$e);
+                }
+                ";
             } elseif (PropelTypes::PHP_ARRAY === $col->getType()) {
                 $script .= "
                 if (!is_array(\$value)) {
@@ -3727,7 +3903,10 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
         if (null !== \$this->$collName && !\$overrideExisting) {
             return;
         }
-        \$this->$collName = new ObjectCollection();
+
+        \$collectionClassName = ".$this->getClassNameFromBuilder($this->getNewTableMapBuilder($refFK->getTable()))."::getTableMap()->getCollectionClassName();
+
+        \$this->{$collName} = new \$collectionClassName;
         \$this->{$collName}->setModel('" . $this->getClassNameFromBuilder($this->getNewStubObjectBuilder($refFK->getTable()), true) . "');
     }
 ";
@@ -3750,6 +3929,8 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
 
         $collName = $this->getRefFKCollVarName($refFK);
 
+        $scheduledForDeletion = lcfirst($this->getRefFKPhpNameAffix($refFK, $plural = true)) . "ScheduledForDeletion";
+
         $script .= "
     /**
      * Method called to associate a $className object to this object
@@ -3767,6 +3948,10 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
 
         if (!\$this->{$collName}->contains(\$l)) {
             \$this->doAdd" . $this->getRefFKPhpNameAffix($refFK, $plural = false) . "(\$l);
+
+            if (\$this->{$scheduledForDeletion} and \$this->{$scheduledForDeletion}->contains(\$l)) {
+                \$this->{$scheduledForDeletion}->remove(\$this->{$scheduledForDeletion}->search(\$l));
+            }
         }
 
         return \$this;
@@ -4491,7 +4676,8 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                 'relCol'   => $this->getCrossFKsPhpNameAffix($crossFKs, true),
                 'collName' => 'combination' . ucfirst($this->getCrossFKsVarName($crossFKs)),
                 'collectionClass' => 'ObjectCombinationCollection',
-                'relatedObjectClassName' => false
+                'relatedObjectClassName' => false,
+                'foreignTableMapName' => false,
             ];
         } else {
             foreach ($crossFKs->getCrossForeignKeys() as $crossFK) {
@@ -4501,13 +4687,15 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                     $this->getNewStubObjectBuilder($crossFK->getForeignTable()),
                     true
                 );
-                $collectionClass = 'ObjectCollection';
+
+                $foreignTableMapName = $this->getClassNameFromBuilder($this->getNewTableMapBuilder($crossFK->getTable()));
 
                 $inits[] = [
                     'relCol' => $relCol,
                     'collName' => $collName,
-                    'collectionClass' => $collectionClass,
-                    'relatedObjectClassName' => $relatedObjectClassName
+                    'collectionClass' => false,
+                    'relatedObjectClassName' => $relatedObjectClassName,
+                    'foreignTableMapName' => $foreignTableMapName,
                 ];
             }
         }
@@ -4517,6 +4705,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             $collName = $init['collName'];
             $collectionClass = $init['collectionClass'];
             $relatedObjectClassName = $init['relatedObjectClassName'];
+            $foreignTableMapName = $init['foreignTableMapName'];
 
             $script .= "
     /**
@@ -4529,10 +4718,19 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
      * @return void
      */
     public function init$relCol()
-    {
-        \$this->$collName = new $collectionClass();
-        \$this->{$collName}Partial = true;
-";
+    {";
+            if($collectionClass) {
+                $script .= "
+        \$this->$collName = new $collectionClass;";
+            } else {
+                $script .= "
+        \$collectionClassName = ".$foreignTableMapName."::getTableMap()->getCollectionClassName();
+
+        \$this->$collName = new \$collectionClassName;";
+            }
+
+            $script .= "
+        \$this->{$collName}Partial = true;";
             if ($relatedObjectClassName) {
                 $script .= "
         \$this->{$collName}->setModel('$relatedObjectClassName');";
@@ -5630,7 +5828,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             $script .= "
         if (null === \$this->{$columnProperty}) {
             try {";
-            $script .= $platform->getIdentifierPhp('$this->'. $columnProperty, '$con', $primaryKeyMethodInfo, '                ');
+            $script .= $platform->getIdentifierPhp('$this->'. $columnProperty, '$con', $primaryKeyMethodInfo, '                ', $column->getPhpType());
             $script .= "
             } catch (Exception \$e) {
                 throw new PropelException('Unable to get sequence id.', 0, \$e);
@@ -5846,13 +6044,13 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             \$con = Propel::getServiceContainer()->getWriteConnection(".$this->getTableMapClass()."::DATABASE_NAME);
         }
 
-        return \$con->transaction(function () use (\$con".($reloadOnUpdate || $reloadOnInsert ? ", \$skipReload" : "").") {
-            \$isInsert = \$this->isNew();";
+        return \$con->transaction(function () use (\$con".($reloadOnUpdate || $reloadOnInsert ? ", \$skipReload" : "").") {";
 
         if ($this->getBuildProperty('generator.objectModel.addHooks')) {
             // save with runtime hooks
             $script .= "
-            \$ret = \$this->preSave(\$con);";
+            \$ret = \$this->preSave(\$con);
+            \$isInsert = \$this->isNew();";
             $this->applyBehaviorModifier('preSave', $script, "            ");
             $script .= "
             if (\$isInsert) {
@@ -5886,6 +6084,8 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             return \$affectedRows;";
         } else {
             // save without runtime hooks
+            $script .= "
+            \$isInsert = \$this->isNew();";
             $this->applyBehaviorModifier('preSave', $script, "            ");
             if ($this->hasBehaviorModifier('preUpdate')) {
                 $script .= "
@@ -6165,6 +6365,12 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
                 $script .="
         \$this->$cloUnserialized = null;";
             }
+            if ($col->isSetType()) {
+                $cloConverted = $clo . '_converted';
+
+                $script .="
+        \$this->$cloConverted = null;";
+            }
         }
 
         $script .= "
@@ -6310,5 +6516,19 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
         $script .= $this->renderTemplate('baseObjectMethodMagicCall', [
                 'behaviorCallScript' => $behaviorCallScript
                 ]);
+    }
+
+    protected function getDateTimeClass(Column $column)
+    {
+        if (PropelTypes::isPhpObjectType($column->getPhpType())) {
+            return $column->getPhpType();
+        }
+
+        $dateTimeClass = $this->getBuildProperty('generator.dateTime.dateTimeClass');
+        if (!$dateTimeClass) {
+            $dateTimeClass = '\DateTime';
+        }
+
+        return $dateTimeClass;
     }
 }

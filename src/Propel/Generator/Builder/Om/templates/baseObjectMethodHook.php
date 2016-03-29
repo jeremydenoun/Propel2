@@ -9,7 +9,7 @@
     {
         if (is_callable('parent::preSave')) {
 	        return parent::preSave($con);
-	    }
+        }
         return true;
     }
 
@@ -23,7 +23,7 @@
     {
         if (is_callable('parent::postSave')) {
 	        parent::postSave($con);
-	    }
+        }
     }
 
 <?php endif?>
@@ -37,7 +37,7 @@
     {
         if (is_callable('parent::preInsert')) {
 	        return parent::preInsert($con);
-	    }
+        }
         return true;
     }
 
@@ -51,7 +51,7 @@
     {
         if (is_callable('parent::postInsert')) {
 	        parent::postInsert($con);
-	    }
+        }
     }
 
 <?php endif?>
@@ -65,7 +65,7 @@
     {
         if (is_callable('parent::preUpdate')) {
 	        return parent::preUpdate($con);
-	    }
+        }
         return true;
     }
 
@@ -79,7 +79,7 @@
     {
         if (is_callable('parent::postUpdate')) {
 	        parent::postUpdate($con);
-	    }
+        }
     }
 
 <?php endif?>
@@ -93,7 +93,7 @@
     {
         if (is_callable('parent::preDelete')) {
 	        return parent::preDelete($con);
-	    }
+        }
         return true;
     }
 
@@ -107,7 +107,7 @@
     {
         if (is_callable('parent::postDelete')) {
 	        parent::postDelete($con);
-	    }
+        }
     }
 
 <?php endif?>

@@ -3,21 +3,25 @@
  * Validates the object and all objects related to this table.
  *
  * @see        getValidationFailures()
- * @param      object $validator A Validator class instance
+ * @param      ValidatorInterface|null $validator A Validator class instance
  * @return     boolean Whether all objects pass validation.
  */
 public function validate(ValidatorInterface $validator = null)
 {
     if (null === $validator) {
-         $translator = new IdentityTranslator();
-         $contextFactory = new ExecutionContextFactory($translator);
-         $validatorFactory = new ConstraintValidatorFactory();
-
-         $validator = new RecursiveValidator(
-					     $contextFactory,
-					     new LazyLoadingMetadataFactory(new StaticMethodLoader()),
-					     $validatorFactory
-	 );
+<?php if(class_exists('Symfony\\Component\\Validator\\Validator\\RecursiveValidator')): //if SF >= 2.5 use new validator classes?>
+        $validator = new RecursiveValidator(
+            new ExecutionContextFactory(new IdentityTranslator()),
+            new LazyLoadingMetadataFactory(new StaticMethodLoader()),
+            new ConstraintValidatorFactory()
+        );
+<?php else: ?>
+        $validator = new Validator(
+            new ClassMetadataFactory(new StaticMethodLoader()),
+            new ConstraintValidatorFactory(),
+            new DefaultTranslator()
+        );
+<?php endif; ?>
     }
 
     $failureMap = new ConstraintViolationList();
