@@ -184,7 +184,9 @@ class ObjectBuilder extends AbstractObjectBuilder
             if (!in_array($val, $valueSet)) {
                 throw new EngineException(sprintf('Default Value "%s" is not among the enumerated values', $val));
             }
-            $defaultValue = array_search($val, $valueSet);
+            $defaultValue = (strtoupper($column->getDomain()->getSqlType()) == "TINYINT" ? array_search($val, $valueSet) : $val);
+        } elseif ($column->isSetType()) {
+            $defaultValue = SetColumnConverter::convertToInt($val, $column->getValueSet());
         } elseif ($column->isPhpPrimitiveType()) {
             settype($val, $column->getPhpType());
             $defaultValue = var_export($val, true);
@@ -1809,7 +1811,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             if (!in_array(\$v, \$valueSet)) {
                 throw new PropelException(sprintf('Value \"%s\" is not accepted in this enumerated column', \$v));
             }
-            ".( strtoupper($col->getDomain()->getSqlType()) == "TINYINT" ? '$v = array_search($v, $valueSet);' : "")."
+            ".(strtoupper($col->getDomain()->getSqlType()) == "TINYINT" ? '$v = array_search($v, $valueSet);' : "")."
         }
 
         if (\$this->$clo !== \$v) {

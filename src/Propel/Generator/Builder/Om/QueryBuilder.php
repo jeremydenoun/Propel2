@@ -1061,14 +1061,14 @@ abstract class ".$this->getUnqualifiedClassName()." extends " . $parentClass . "
             if (!in_array(\$$variableName, \$valueSet)) {
                 throw new PropelException(sprintf('Value \"%s\" is not accepted in this enumerated column', \$$variableName));
             }
-            \$$variableName = array_search(\$$variableName, \$valueSet);
+            ".(strtoupper($col->getDomain()->getSqlType()) == "TINYINT" ? "\$$variableName = array_search(\$$variableName, \$valueSet);" : '')."
         } elseif (is_array(\$$variableName)) {
             \$convertedValues = array();
             foreach (\$$variableName as \$value) {
                 if (!in_array(\$value, \$valueSet)) {
                     throw new PropelException(sprintf('Value \"%s\" is not accepted in this enumerated column', \$value));
                 }
-                \$convertedValues []= array_search(\$value, \$valueSet);
+                \$convertedValues []= ".(strtoupper($col->getDomain()->getSqlType()) == "TINYINT" ? "array_search(\$value, \$valueSet);" : "\$value;")."
             }
             \$$variableName = \$convertedValues;
             if (null === \$comparison) {
