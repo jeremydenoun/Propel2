@@ -286,8 +286,8 @@ class Index extends MappingModel
         if (!$test) {
             return false;
         }
-        // FIX change test ($this->getColumnSize($name, $caseInsensitive) != $size) to (0) for disable index column check size because we can have not complete size column indexed
-        if (0) {
+
+        if ($this->getColumnSize($name, $caseInsensitive) != $size) {
             return false;
         }
 
