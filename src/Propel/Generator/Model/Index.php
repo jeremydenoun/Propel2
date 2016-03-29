@@ -287,7 +287,8 @@ class Index extends MappingModel
             return false;
         }
 
-        if ($this->getColumnSize($name, $caseInsensitive) != $size) {
+        // I must remove this check because this no-reentrant
+        if (0) {
             return false;
         }
 
