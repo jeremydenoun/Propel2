@@ -185,7 +185,7 @@ class ObjectBuilder extends AbstractObjectBuilder
             if (!in_array($val, $valueSet)) {
                 throw new EngineException(sprintf('Default Value "%s" is not among the enumerated values', $val));
             }
-            $defaultValue = (strtoupper($column->getDomain()->getSqlType()) == "TINYINT" ? array_search($val, $valueSet) : $val);
+            $defaultValue = array_search($val, $valueSet);
         } elseif ($column->isSetType()) {
             $defaultValue = SetColumnConverter::convertToInt($val, $column->getValueSet());
         } elseif ($column->isPhpPrimitiveType()) {
