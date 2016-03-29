@@ -2278,7 +2278,7 @@ abstract class ".$this->getUnqualifiedClassName().$parentClass." implements Acti
             \$this->$clo = (null !== \$col) ? PropelDateTime::newInstance(\$col, null, '$dateTimeClass') : null;";
                 } elseif ($col->isEnumType()) {
                     $script .= "
-            \$this->$clo = (null !== \$col) ? \$col : null;";
+            \$this->$clo = (null !== \$col) ? (is_numeric(\$col) ? (".$col->getPhpType().")\$col : \$col) : null;";
                 } elseif ($col->isPhpPrimitiveType()) {
                     $script .= "
             \$this->$clo = (null !== \$col) ? (".$col->getPhpType().") \$col : null;";
