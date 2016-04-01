@@ -83,7 +83,7 @@ class PropelDateTime extends \DateTime
      */
     public static function newInstance($value, DateTimeZone $timeZone = null, $dateTimeClass = 'DateTime')
     {
-        if ($value instanceof \DateTimeInterface) {
+        if ($value instanceof \DateTimeInterface || $value instanceof \DateTime) {
             return $value;
         }
         if (empty($value)) {
