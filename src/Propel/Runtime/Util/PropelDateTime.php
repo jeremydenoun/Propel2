@@ -83,7 +83,7 @@ class PropelDateTime extends \DateTime
      */
     public static function newInstance($value, DateTimeZone $timeZone = null, $dateTimeClass = 'DateTime')
     {
-        if ($value instanceof \DateTimeInterface) {
+        if ($value instanceof \DateTimeInterface || $value instanceof \DateTime) {
             return $value;
         }
         if (empty($value)) {
@@ -98,7 +98,7 @@ class PropelDateTime extends \DateTime
                 // because of a DateTime bug: http://bugs.php.net/bug.php?id=43003
                 $dateTimeObject->setTimeZone(new \DateTimeZone(date_default_timezone_get()));
             } else {
-                if (strpos($value, "%") !== false) {
+                if (is_string($value) && strpos($value, "%") !== false) {
                     return new FakeDateTime($value, $timeZone);
                 }
 
