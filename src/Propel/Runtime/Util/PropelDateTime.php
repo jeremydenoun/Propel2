@@ -104,9 +104,16 @@ class PropelDateTime extends \DateTime
 
                 if (null === $timeZone) {
                     // stupid DateTime constructor signature
-                    $dateTimeObject = new $dateTimeClass($value);
+                    // string parsing throw error + exception : https://bugs.php.net/bug.php?id=67881
+                    if (@strtotime($value) !== false) {
+                        $dateTimeObject = new $dateTimeClass($value);
+                    } else
+                        throw new \Exception("Failed to parse string ({$value})");
                 } else {
-                    $dateTimeObject = new $dateTimeClass($value, $timeZone);
+                    if (@strtotime($value) !== false) {
+                        $dateTimeObject = new $dateTimeClass($value, $timeZone);
+                    } else
+                        throw new \Exception("Failed to parse string ({$value})");
                 }
             }
         } catch (\Exception $e) {
