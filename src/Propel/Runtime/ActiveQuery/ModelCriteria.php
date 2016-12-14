@@ -1828,7 +1828,8 @@ class ModelCriteria extends BaseModelCriteria
             if (is_array($value)) {
                 $value = array_map([$colMap, 'getValueSetKey'], $value);
             } else {
-                $value = $colMap->getValueSetKey($value);
+                // @FIX : for my usage only we should use default value and not index in enum case
+                //$value = $colMap->getValueSetKey($value);
             }
         } elseif ($colMap->isSetType() && !is_null($value)) {
             try {
