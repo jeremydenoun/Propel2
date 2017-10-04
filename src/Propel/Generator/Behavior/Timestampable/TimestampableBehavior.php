@@ -23,8 +23,11 @@ class TimestampableBehavior extends Behavior
     protected $parameters = [
         'create_column' => 'created_at',
         'update_column' => 'updated_at',
+        'delete_column' => 'deleted_at',
+        'first'         => false,
         'disable_created_at' => 'false',
         'disable_updated_at' => 'false',
+        'disable_deleted_at' => 'true',
     ];
 
 
@@ -38,6 +41,11 @@ class TimestampableBehavior extends Behavior
         return !$this->booleanValue($this->getParameter('disable_created_at'));
     }
 
+    protected function withDeletedAt()
+    {
+        return !$this->booleanValue($this->getParameter('disable_deleted_at'));
+    }
+
     /**
      * Add the create_column and update_columns to the current table
      */
@@ -45,30 +53,61 @@ class TimestampableBehavior extends Behavior
     {
         $table = $this->getTable();
 
-        if ($this->withCreatedAt() && !$table->hasColumn($this->getParameter('create_column'))) {
-            $column_def = array(
-                'name' => $this->getParameter('create_column'),
-                'type' => 'TIMESTAMP'
-            );
-            if ($this->getDatabase() && $this->getDatabase()->getPlatform() && $this->getDatabase()->getPlatform()->getDatabaseType() == "mysql"){
-                //http://jasonbos.co/two-timestamp-columns-in-mysql/
-                $column_def['required'] = true;
-                $column_def['defaultExpr'] = "'0000-00-00 00:00:00'";
+        $fields = ["create", "update", "delete"];
+        if ($this->parameters["first"])
+            $fields = array_reverse($fields);
+        foreach ($fields as $field) {
+            switch ($field) {
+                case "create" :
+                    if ($this->withCreatedAt() && !$table->hasColumn($this->getParameter('create_column'))) {
+                        $column_def = array(
+                            'name' => $this->getParameter('create_column'),
+                            'type' => 'TIMESTAMP'
+                        );
+                        if ($this->getDatabase() && $this->getDatabase()->getPlatform() && $this->getDatabase()->getPlatform()->getDatabaseType() == "mysql"){
+                            //http://jasonbos.co/two-timestamp-columns-in-mysql/
+                            $column_def['required'] = true;
+                            $column_def['defaultExpr'] = "'0000-00-00 00:00:00'";
+                        }
+                        $table->addColumn($column_def, $this->parameters["first"]);
+                    }
+                break;
+                case "update" :
+                    if ($this->withUpdatedAt() && !$table->hasColumn($this->getParameter('update_column'))) {
+                        $column_def = array(
+                            'name' => $this->getParameter('update_column'),
+                            'type' => 'TIMESTAMP'
+                        );
+                        if ($this->getDatabase() && $this->getDatabase()->getPlatform() && $this->getDatabase()->getPlatform()->getDatabaseType() == "mysql") {
+                            //http://jasonbos.co/two-timestamp-columns-in-mysql/
+                            $column_def['required'] = true;
+                            $column_def['defaultExpr'] = 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP';
+                        }
+                        if ($this->getDatabase() && $this->getDatabase()->getPlatform() && $this->getDatabase()->getPlatform()->getDatabaseType() == "pgsql") {
+                            //https://stackoverflow.com/a/9556581
+                            $column_def['defaultExpr'] = 'current_timestamp';
+                        }
+                        $table->addColumn($column_def, $this->parameters["first"]);
+                    }
+                break;
+                case "delete" :
+                    if ($this->withDeletedAt() && !$table->hasColumn($this->getParameter('delete_column'))) {
+                        $column_def = array(
+                            'name' => $this->getParameter('delete_column'),
+                            'type' => 'TIMESTAMP'
+                        );
+                        if ($this->getDatabase() && $this->getDatabase()->getPlatform() && $this->getDatabase()->getPlatform()->getDatabaseType() == "mysql"){
+                            //http://jasonbos.co/two-timestamp-columns-in-mysql/
+                            $column_def['required'] = true;
+                            $column_def['defaultExpr'] = "'0000-00-00 00:00:00'";
+                        }
+                        $table->addColumn($column_def, $this->parameters["first"], $this->parameters["first"]);
+                    }
+                break;
             }
-            $table->addColumn($column_def);
         }
-        if ($this->withUpdatedAt() && !$table->hasColumn($this->getParameter('update_column'))) {
-            $column_def = array(
-                'name' => $this->getParameter('update_column'),
-                'type' => 'TIMESTAMP'
-            );
-            if ($this->getDatabase() && $this->getDatabase()->getPlatform() && $this->getDatabase()->getPlatform()->getDatabaseType() == "mysql") {
-                //http://jasonbos.co/two-timestamp-columns-in-mysql/
-                $column_def['required'] = true;
-                $column_def['defaultExpr'] = 'CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP';
-            }
-            $table->addColumn($column_def);
-        }
+
+
     }
 
     /**

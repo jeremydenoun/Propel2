@@ -23,6 +23,7 @@ class AutoAddPkBehavior extends Behavior
     protected $parameters = [
         'name'          => 'id',
         'autoIncrement' => 'true',
+        'first'         => false,
         'type'          => 'INTEGER'
     ];
 
@@ -48,7 +49,7 @@ class AutoAddPkBehavior extends Behavior
         $table = $this->getTable();
         if (!$table->hasPrimaryKey() && !$table->hasBehavior('concrete_inheritance')) {
             $columnAttributes = array_merge(['primaryKey' => 'true'], $this->getParameters());
-            $this->getTable()->addColumn($columnAttributes, true);
+            $this->getTable()->addColumn($columnAttributes, $this->parameters["first"]);
         }
     }
 }

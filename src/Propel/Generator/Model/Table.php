@@ -534,8 +534,9 @@ class Table extends ScopedMappingModel implements IdMethod
             if ($col->isInheritance()) {
                 $this->inheritanceColumn = $col;
             }
-            if ($first)
+            if ($first) {
                 array_unshift($this->columns, $col);
+            }
             else
                 $this->columns[] = $col;
             $this->columnsByName[$col->getName()] = $col;

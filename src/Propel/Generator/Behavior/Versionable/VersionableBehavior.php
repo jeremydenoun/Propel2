@@ -24,6 +24,7 @@ class VersionableBehavior extends Behavior
     protected $parameters = [
         'version_column'            => 'version',
         'version_table'             => '',
+        'first'                     => false,
         'log_created_at'            => 'false',
         'log_created_by'            => 'false',
         'log_comment'               => 'false',
@@ -74,7 +75,7 @@ class VersionableBehavior extends Behavior
                 'name'    => $this->getParameter('version_column'),
                 'type'    => 'INTEGER',
                 'default' => 0
-            ]);
+            ], $this->parameters["first"]);
         }
     }
 
@@ -105,6 +106,8 @@ class VersionableBehavior extends Behavior
 
     protected function addVersionTable()
     {
+        if (!$this->getParameter('version_table'))
+            return;
         $table = $this->getTable();
         $database = $table->getDatabase();
         $versionTableName = $this->getParameter('version_table') ? $this->getParameter('version_table') : ($table->getName() . '_version');
@@ -166,6 +169,8 @@ class VersionableBehavior extends Behavior
 
     public function addForeignKeyVersionColumns()
     {
+        if (!$this->getParameter('version_table'))
+            return;
         $versionTable = $this->versionTable;
         foreach ($this->getVersionableFks() as $fk) {
             $fkVersionColumnName = $fk->getLocalColumnName() . '_version';
