@@ -272,7 +272,9 @@ public function isVersioningNecessary(\$con = null)
     protected function addAddVersion(&$script)
     {
         $versionTable       = $this->behavior->getVersionTable();
-        $versionARClassName = $this->builder->getClassNameFromBuilder($this->builder->getNewStubObjectBuilder($versionTable));
+	if (!$versionTable)
+	   return;
+	$versionARClassName = $this->builder->getClassNameFromBuilder($this->builder->getNewStubObjectBuilder($versionTable));
 
         $script .= "
 /**
@@ -351,11 +353,15 @@ public function toVersion(\$versionNumber, \$con = null)
     {
         $ARclassName = $this->getActiveRecordClassName();
         $versionTable = $this->behavior->getVersionTable();
-        $versionColumnName = $versionTable->getColumn($this->behavior->getParameter('version_column'))->getPhpName();
+	if (!$versionTable)
+	   return;
+
+	$versionColumnName = $versionTable->getColumn($this->behavior->getParameter('version_column'))->getPhpName();
         $versionARClassName = $this->builder->getClassNameFromBuilder($this->builder->getNewStubObjectBuilder($versionTable));
         $tablePKs = $this->table->getPrimaryKey();
         $primaryKeyName = $tablePKs[0]->getPhpName();
-        $script .= "
+
+	$script .= "
 /**
  * Sets the properties of the current object to the value they had at a specific version
  *
@@ -450,7 +456,11 @@ public function populateFromVersion(\$version, \$con = null, &\$loadedObjects = 
 
     protected function addGetLastVersionNumber(&$script)
     {
-        $script .= "
+        $versionTable = $this->behavior->getVersionTable();
+    	if (!$versionTable)
+       	   return;
+
+	$script .= "
 /**
  * Gets the latest persisted version number for the current object
  *
@@ -492,7 +502,10 @@ public function isLastVersion(\$con = null)
 
     protected function addGetOneVersion(&$script)
     {
-        $versionARClassName = $this->builder->getClassNameFromBuilder($this->builder->getNewStubObjectBuilder($this->behavior->getVersionTable()));
+        $versionTable       = $this->behavior->getVersionTable();
+        if (!$versionTable)
+           return;
+	$versionARClassName = $this->builder->getClassNameFromBuilder($this->builder->getNewStubObjectBuilder($this->behavior->getVersionTable()));
         $script .= "
 /**
  * Retrieves a version object for this entity and a version number
@@ -515,7 +528,9 @@ public function getOneVersion(\$versionNumber, \$con = null)
     protected function addGetAllVersions(&$script)
     {
         $versionTable = $this->behavior->getVersionTable();
-        $versionARClassName = $this->builder->getClassNameFromBuilder($this->builder->getNewStubObjectBuilder($versionTable));
+	if (!$versionTable)
+	   return;
+	$versionARClassName = $this->builder->getClassNameFromBuilder($this->builder->getNewStubObjectBuilder($versionTable));
         //this force the use statement for  VersionTableMap
         $this->builder->getClassNameFromBuilder($this->builder->getNewTableMapBuilder($versionTable));
         $versionForeignColumn = $versionTable->getColumn($this->behavior->getParameter('version_column'));
@@ -670,7 +685,9 @@ public function compareVersions(\$fromVersionNumber, \$toVersionNumber, \$keys =
     {
         $plural = true;
         $versionTable = $this->behavior->getVersionTable();
-        $versionARClassName = $this->builder->getNewStubObjectBuilder($versionTable)->getClassName();
+	if (!$versionTable)
+	   return;
+	$versionARClassName = $this->builder->getNewStubObjectBuilder($versionTable)->getClassName();
         $versionTableMapClassName = $this->builder->getClassNameFromBuilder($this->builder->getNewTableMapBuilder($versionTable));
         $fks = $versionTable->getForeignKeysReferencingTable($this->table->getName());
         $relCol = $this->builder->getRefFKPhpNameAffix($fks[0], $plural);
