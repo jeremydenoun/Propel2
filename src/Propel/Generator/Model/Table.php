@@ -517,10 +517,11 @@ class Table extends ScopedMappingModel implements IdMethod
      * Adds a new column to the table.
      *
      * @param  Column|array    $col
+     * @param  bool    $first     
      * @throws EngineException
      * @return Column
      */
-    public function addColumn($col)
+    public function addColumn($col, $first = false)
     {
         if ($col instanceof Column) {
 
@@ -533,12 +534,14 @@ class Table extends ScopedMappingModel implements IdMethod
             if ($col->isInheritance()) {
                 $this->inheritanceColumn = $col;
             }
-
-            $this->columns[] = $col;
+            if ($first)
+                array_unshift($this->columns, $col);
+            else
+                $this->columns[] = $col;
             $this->columnsByName[$col->getName()] = $col;
             $this->columnsByLowercaseName[strtolower($col->getName())] = $col;
             $this->columnsByPhpName[$col->getPhpName()] = $col;
-            $col->setPosition(count($this->columns));
+            $col->setPosition($first ? count($this->columns)*-1 : count($this->columns));
 
             if ($col->requiresTransactionInPostgres()) {
                 $this->needsTransactionInPostgres = true;
