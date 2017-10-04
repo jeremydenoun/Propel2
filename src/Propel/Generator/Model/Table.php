@@ -554,7 +554,7 @@ class Table extends ScopedMappingModel implements IdMethod
         $column->setTable($this);
         $column->loadMapping($col);
 
-        return $this->addColumn($column); // call self w/ different param
+        return $this->addColumn($column, $first); // call self w/ different param
     }
 
     /**
